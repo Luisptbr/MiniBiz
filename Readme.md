@@ -178,7 +178,7 @@ ________________________________________________________________________________
 
 + **Configure database username and password**
 
-	'''properties
+	```properties
 
 	# minibiz/src/main/resources/application.properties
 	spring.datasource.url=jdbc:mysql://localhost:3306/minibiz_app?useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
