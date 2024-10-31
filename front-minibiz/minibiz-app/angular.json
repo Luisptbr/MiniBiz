@@ -62,10 +62,12 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "minibiz-app:build:production"
+              "buildTarget": "minibiz-app:build:production",
+              "port": 4200
             },
             "development": {
-              "buildTarget": "minibiz-app:build:development"
+              "buildTarget": "minibiz-app:build:development",
+              "port": 4200
             }
           },
           "defaultConfiguration": "development"
