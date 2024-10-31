@@ -170,12 +170,10 @@ ________________________________________________________________________________
     -   Frontend hospedado em um serviço como Firebase ou Netlify.
 ____________________________________________________________________________________________________________
 
-     **Create MySQL database**
-
-	```bash
++ **Create MySQL database**
+  	```bash
 	mysql> create database minibiz_app
 	```
-
 + **Configure database username and password**
 
 	```properties
