@@ -13,10 +13,10 @@ public class MailConfig {
     @Bean
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost(System.getProperty("MAIL_HOST"));
-        mailSender.setPort(Integer.parseInt(System.getProperty("MAIL_PORT")));
-        mailSender.setUsername(System.getProperty("MAIL_USERNAME"));
-        mailSender.setPassword(System.getProperty("MAIL_PASSWORD"));
+        mailSender.setHost("smtp.gmail.com");
+        mailSender.setPort(587);
+        mailSender.setUsername("minibizsolution@gmail.com");
+        mailSender.setPassword("241194Lu*");
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
@@ -27,3 +27,4 @@ public class MailConfig {
         return mailSender;
     }
 }
+ 
