@@ -132,13 +132,13 @@ GET /api/clients
 
 -   Descrição: Retorna a lista de todos os clientes cadastrados.
 -   Resposta:
-![alt text](image.png)
+-   ![alt text](image.png)
 
 POST /api/clients
 
 -   Descrição: Adiciona um novo cliente ao sistema.
 -   Parâmetros de Entrada:
-![alt text](image-2.png)
+-   ![alt text](image-2.png)
 ____________________________________________________________________________________________________________
 7. Interface do Usuário
 O front-end será uma aplicação Angular com uma interface amigável, incluindo:
@@ -170,12 +170,10 @@ ________________________________________________________________________________
     -   Frontend hospedado em um serviço como Firebase ou Netlify.
 ____________________________________________________________________________________________________________
 
-     **Create MySQL database**
-
-	```bash
++ **Create MySQL database**
+  	```bash
 	mysql> create database minibiz_app
 	```
-
 + **Configure database username and password**
 
 	```properties
