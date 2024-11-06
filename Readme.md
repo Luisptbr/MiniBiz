@@ -179,7 +179,8 @@ ________________________________________________________________________________
 	```properties
 
 	# minibiz/src/main/resources/application.properties
-	spring.datasource.url=jdbc:mysql://localhost:3306/minibiz_app?useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+	spring.datasource.url=jdbc:mysql://localhost:3306
+/seu-banco
     spring.datasource.username=<YOUR_DB_USERNAME>
     spring.datasource.password=<YOUR_DB_PASSWORD>
 	```
