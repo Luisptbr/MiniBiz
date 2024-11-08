@@ -38,8 +38,8 @@ ________________________________________________________________________________
 -   Relatório financeiro: Fornecer uma visão geral das receitas e despesas.
 
 2.5. Gestão de Usuários
--   Cadastrar usuário: Adicionar novos usuários com diferentes níveis de permissão (admin, vendedor, gestor).
--   Autenticação: Implementar autenticação via OAuth2 (Google, Facebook, GitHub) e por email/senha.
+-   Cadastrar usuário: Somente o Admin poderá criar novos usuários.
+-   Autenticação: Implementar autenticação via OAuth2 por email/senha.
 -   Controle de acessos: Definir permissões de acordo com o nível de acesso do usuário.
 ____________________________________________________________________________________________________________
 
@@ -179,8 +179,7 @@ ________________________________________________________________________________
 	```properties
 
 	# minibiz/src/main/resources/application.properties
-	spring.datasource.url=jdbc:mysql://localhost:3306
-/seu-banco
+	spring.datasource.url=jdbc:mysql://localhost:3306/seu-banco
     spring.datasource.username=<YOUR_DB_USERNAME>
     spring.datasource.password=<YOUR_DB_PASSWORD>
 	```
