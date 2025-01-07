@@ -1,53 +1,48 @@
 package br.com.minibiz.controller;
 
-import br.com.minibiz.model.ApiResponse;
-import br.com.minibiz.model.products.Products;
+import br.com.minibiz.model.product.Product;
 import br.com.minibiz.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus; // Importando HttpStatus
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 @RestController
-@RequestMapping("/products")
+@RequestMapping("/api/products") // Note que o endpoint é no plural
 public class ProductController {
-	
-	@Autowired
-	private ProductService productService;
-	
-	@GetMapping
-	public ResponseEntity<List<Products>> getAllProducts() {
-	    List<Products> products = productService.getAllProducts();
-	    return ResponseEntity.ok(products);
-	}
-	
-	@GetMapping("/{id}")
-	public ResponseEntity<?> getProductById(@PathVariable Long id) {
-	    Products product = productService.getProductById(id);
-	    return ResponseEntity.ok(product);
-	}
-	
-	@PostMapping
-	public ResponseEntity<ApiResponse> createProduct(@RequestBody Products product) {
-	    productService.createProduct(product);
-	    return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("Produto criado com sucesso", true));
-	}
-	
-	@PutMapping("/{id}")
-	public ResponseEntity<ApiResponse> updateProduct(@PathVariable Long id, @RequestBody Products productDetails) {
-	    productService.updateProduct(id, productDetails);
-	    return ResponseEntity.ok(new ApiResponse("Produto atualizado com sucesso", true));
-	}
 
-	
-	@DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteProduct(@PathVariable Long id){
-        try {
-            productService.deleteProduct(id);
-            return ResponseEntity.ok(new ApiResponse("Produto excluído com sucesso", true));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body(new ApiResponse("Produto não encontrado", false));
-        }
+    @Autowired
+    private ProductService productService;
+
+    @PostMapping
+    public ResponseEntity<Product> create(@RequestBody Product product) {
+        Product novoProduto = productService.create(product);
+        return ResponseEntity.status(HttpStatus.CREATED).body(novoProduto);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Product> update(@PathVariable Long id, @RequestBody Product produtoAtualizado) {
+        Product produto = productService.update(id, produtoAtualizado);
+        return ResponseEntity.ok(produto);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        productService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> findById(@PathVariable Long id) {
+        Product product = productService.findById(id);
+        return ResponseEntity.ok(product);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<Product>> findAll(Pageable pageable) {
+        Page<Product> produtos = productService.findAll(pageable);
+        return ResponseEntity.ok(produtos);
     }
 }

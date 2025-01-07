@@ -30,17 +30,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Requisito da API RestFull é que a session seja STATELESS.
                 .authorizeHttpRequests(authorize -> authorize
-                		.requestMatchers(HttpMethod.OPTIONS, "/auth/**").permitAll() // Permite requisições OPTIONS para CORS
+                		.requestMatchers(HttpMethod.OPTIONS, "/auth/**").permitAll() // Permite requisições OPTIONS para o CORS
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll() // Não é preciso autenticação.
                         .requestMatchers(HttpMethod.POST, "/auth/register").permitAll() // Não é preciso autenticação.
                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products").permitAll() // Alterar para .authenticated()
-                        .requestMatchers(HttpMethod.POST, "/products").permitAll() // Alterar para .authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/products").permitAll() // Alterar para .authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/products").permitAll() // Alterar para .authenticated()
-                        
-                        .anyRequest().authenticated()
+                        .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll() // .authenticated() 
+                        .requestMatchers(HttpMethod.POST, "/products").permitAll()
+                        .anyRequest().authenticated() //Qualquer outra requisição está autenticada.
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

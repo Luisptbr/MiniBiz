@@ -7,8 +7,8 @@ import br.com.minibiz.dto.RegisterRequestDTO;
 import br.com.minibiz.dto.ResponseDTO;
 import br.com.minibiz.infra.security.TokenService;
 import br.com.minibiz.repository.UserRepository;
-import br.com.minibiz.service.email.EmailService;
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.minibiz.service.EmailService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ public class AuthController {
 	private final TokenService tokenService;
 	private final EmailService emailService;
 
-	@Autowired
+	
 	public AuthController(UserRepository repository, PasswordEncoder passwordEncoder, TokenService tokenService,
 			EmailService emailService) {
 		this.repository = repository;

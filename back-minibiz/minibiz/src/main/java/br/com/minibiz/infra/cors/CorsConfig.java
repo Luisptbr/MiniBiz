@@ -17,6 +17,8 @@ public class CorsConfig {
         config.setAllowCredentials(true);
         config.addAllowedOrigin("http://localhost:4200"); 
         config.addAllowedHeader("*");
+        config.addAllowedHeader("Content-Type");
+        config.addAllowedHeader("Authorization");
         config.addAllowedMethod("GET");
         config.addAllowedMethod("POST");
         config.addAllowedMethod("PUT");
@@ -24,5 +26,6 @@ public class CorsConfig {
         config.addAllowedMethod("OPTIONS");
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
+
     }
 }

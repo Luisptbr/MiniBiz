@@ -42,6 +42,9 @@ public class ClientService {
 	}
 
 	public void delete(Long id) {
+		if (!clientRepository.existsById(id)) {
+			throw new ClientNotFoundException(id);
+		}
 		try {
 			clientRepository.deleteById(id);
 		} catch (Exception e) {
