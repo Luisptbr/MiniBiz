@@ -1,7 +1,7 @@
 package br.com.minibiz.infra.security;
 
 import br.com.minibiz.model.user.User;
-import br.com.minibiz.repository.UserRepository;
+//import br.com.minibiz.repository.UserRepository;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
@@ -18,7 +18,7 @@ import java.util.Date;
 public class TokenService {
 
     @Autowired
-    private UserRepository userRepository;
+   // private UserRepository userRepository;
 
     @Value("${api.security.token.secret}")
     private String secret;

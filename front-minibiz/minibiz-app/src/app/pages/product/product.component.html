@@ -1,0 +1,61 @@
+<div class="product-management">
+  <h2>Gerenciamento de Produtos</h2>
+  
+  <!-- Filtro de Produtos -->
+  <div class="filter-container">
+    <input type="text" placeholder="Filtrar por Nome" (input)="applyFilter($event, 'nome')">
+    <input type="text" placeholder="Filtrar por ID" (input)="applyFilter($event, 'id')">
+    <input type="text" placeholder="Filtrar por Preço" (input)="applyFilter($event, 'preco')">
+  </div>
+
+  <!-- Botão de Adicionar Produto -->
+  <button class="add-button" (click)="newProduct()">Adicionar Produto</button>
+  
+  <!-- Formulário de Produto -->
+  <form [formGroup]="productForm" (ngSubmit)="submit()" *ngIf="isFormVisible" class="product-form">
+    <div class="form-group">
+      <label for="nome">Nome</label>
+      <input id="nome" formControlName="nome">
+    </div>
+    <div class="form-group">
+      <label for="descricao">Descrição</label>
+      <input id="descricao" formControlName="descricao">
+    </div>
+    <div class="form-group">
+      <label for="preco">Preço</label>
+      <input id="preco" formControlName="preco" type="number">
+    </div>
+    <div class="form-group">
+      <label for="quantidadeEmEstoque">Quantidade em Estoque</label>
+      <input id="quantidadeEmEstoque" formControlName="quantidadeEmEstoque" type="number">
+    </div>
+    <div class="form-group">
+      <label for="codigoProduto">Código do Produto</label>
+      <input id="codigoProduto" formControlName="codigoProduto">
+    </div>
+    <div class="form-group">
+      <label for="categoria">Categoria</label>
+      <input id="categoria" formControlName="categoria">
+    </div>
+    <div class="form-buttons">
+      <button type="submit">Salvar</button>
+      <button type="button" (click)="clearForm()">Cancelar</button>
+    </div>
+  </form>
+
+  <!-- Lista de Produtos -->
+  <h3>Lista de Produtos</h3>
+  <ul class="product-list">
+    <li *ngFor="let product of filteredProducts">
+      <span>{{ product.nome }} - {{ product.preco | currency:'BRL' }}</span>
+      <div class="action-buttons">
+        <button (click)="editProduct(product)">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button (click)="deleteProduct(product.id)">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+    </li>
+  </ul>
+</div>

@@ -21,27 +21,33 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClientController {
 	@Autowired
 	private ClientService clientService;
-
+	
+	@GetMapping
+	public ResponseEntity<Page<Client>> listarTodosClientes(Pageable pageable) {
+		Page<Client> clients = clientService.findAll(pageable);
+		return ResponseEntity.ok(clients);
+	}
+	
 	@GetMapping("/{id}")
-	public ResponseEntity<Client> findById(@PathVariable Long id) {
+	public ResponseEntity<Client> listarCliente(@PathVariable Long id) {
 		Client client = clientService.findById(id);
 		return ResponseEntity.ok(client);
 	}
 
 	@PostMapping
-	public ResponseEntity<Client> create(@RequestBody Client client) {
+	public ResponseEntity<Client> criarCliente(@RequestBody Client client) {
 		Client novoCliente = clientService.create(client);
 		return ResponseEntity.ok(novoCliente);
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<Client> update(@PathVariable Long id, @RequestBody Client clienteAtualizado) {
+	public ResponseEntity<Client> editarCliente(@PathVariable Long id, @RequestBody Client clienteAtualizado) {
 		Client cliente = clientService.update(id, clienteAtualizado);
 		return ResponseEntity.ok(cliente);
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<String> delete(@PathVariable Long id) {
+	public ResponseEntity<String> deletarCliente(@PathVariable Long id) {
 	    try {
 	        clientService.delete(id); // Supondo que delete lance uma exceção se algo der errado
 	        return ResponseEntity.ok("Cliente deletado com sucesso!");
@@ -50,12 +56,5 @@ public class ClientController {
 	    } catch (Exception e) {
 	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao deletar cliente: " + e.getMessage());
 	    }
-	}
-
-
-	@GetMapping
-	public ResponseEntity<Page<Client>> findAll(Pageable pageable) {
-		Page<Client> clients = clientService.findAll(pageable);
-		return ResponseEntity.ok(clients);
 	}
 }
