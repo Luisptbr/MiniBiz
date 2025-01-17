@@ -52,11 +52,11 @@ public class Venda {
         this.items = items;
     }
 
-    public BigDecimal getTotalAmount() {
+    public BigDecimal getValorTotal() {
         return valorTotal;
     }
 
-    public void setTotalAmount(BigDecimal valorTotal) {
+    public void setValorTotal(BigDecimal valorTotal) {
         this.valorTotal = valorTotal;
     }
 
