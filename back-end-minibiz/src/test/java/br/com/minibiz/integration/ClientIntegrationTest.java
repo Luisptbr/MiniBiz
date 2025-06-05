@@ -4,7 +4,7 @@ import br.com.minibiz.model.client.Client;
 import br.com.minibiz.model.user.User;
 import br.com.minibiz.repository.ClientRepository;
 import br.com.minibiz.repository.UserRepository;
-import br.com.minibiz.service.TokenService;
+import br.com.minibiz.infra.security.TokenService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

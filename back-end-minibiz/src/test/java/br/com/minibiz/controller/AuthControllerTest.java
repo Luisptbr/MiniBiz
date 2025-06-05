@@ -53,7 +53,7 @@ public class AuthControllerTest {
     @BeforeEach
     void setUp() {
         testUser = new User();
-        testUser.setId(1L);
+        testUser.setId("1");
         testUser.setEmail("test@example.com");
         testUser.setName("Test User");
         testUser.setPassword("encodedPassword");
