@@ -26,6 +26,8 @@ import { ProductService } from "@/services/product.service"
 import type { Sale, SaleItem } from "@/models/sale.model"
 import type { Client } from "@/models/client.model"
 import type { Product } from "@/models/product.model"
+import type { ApiResponse } from "@/src/types"
+import { Page } from "@/services/client.service"
 import { Plus, Edit, Trash2, Search } from "lucide-react"
 
 export function SalesManagement() {
@@ -79,9 +81,38 @@ export function SalesManagement() {
         ProductService.getProducts(),
       ])
 
-      if (salesResponse.success) setSales(salesResponse.data)
-      if (clientsResponse.success) setClients(clientsResponse.data)
-      if (productsResponse.success) setProducts(productsResponse.data)
+      // Handle sales response
+      if (salesResponse && salesResponse.success && salesResponse.data) {
+        if (salesResponse.data && 'content' in salesResponse.data) {
+          // Handle paginated response
+          setSales(salesResponse.data.content);
+        } else {
+          // Handle array response
+          setSales(Array.isArray(salesResponse.data) ? salesResponse.data : []);
+        }
+      }
+      
+      // Handle clients response
+      if (clientsResponse && clientsResponse.success && clientsResponse.data) {
+        if (clientsResponse.data && 'content' in clientsResponse.data) {
+          // Handle paginated response
+          setClients(clientsResponse.data.content);
+        } else {
+          // Handle array response
+          setClients(Array.isArray(clientsResponse.data) ? clientsResponse.data : []);
+        }
+      }
+      
+      // Handle products response
+      if (productsResponse && productsResponse.success && productsResponse.data) {
+        if (productsResponse.data && 'content' in productsResponse.data) {
+          // Handle paginated response
+          setProducts(productsResponse.data.content);
+        } else {
+          // Handle array response
+          setProducts(Array.isArray(productsResponse.data) ? productsResponse.data : []);
+        }
+      }
     } catch (err) {
       setError("An error occurred while loading data")
     } finally {

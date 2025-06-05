@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ProductService } from "@/services/product.service"
 import type { Product } from "@/models/product.model"
+import type { ApiResponse } from "@/src/types"
 import { Plus, Edit, Trash2, Search } from "lucide-react"
 
 export function InventoryManagement() {
@@ -66,8 +67,15 @@ export function InventoryManagement() {
     try {
       setIsLoading(true)
       const response = await ProductService.getProducts()
-      if (response.success) {
-        setProducts(response.data)
+      if (response && response.success && response.data) {
+        // Check if the response is a paginated response or a direct array
+        if (response.data && 'content' in response.data) {
+          // Handle paginated response by extracting the content array
+          setProducts(response.data.content)
+        } else {
+          // Handle direct array response
+          setProducts(Array.isArray(response.data) ? response.data : [])
+        }
       } else {
         setError(response.message || "Failed to load products")
       }
