@@ -30,6 +30,9 @@ import type { ApiResponse } from "@/src/types"
 import { Page } from "@/services/client.service"
 import { Plus, Edit, Trash2, Search } from "lucide-react"
 
+// Define the possible sale status values
+type SaleStatus = "pending" | "completed" | "cancelled";
+
 export function SalesManagement() {
   const [sales, setSales] = useState<Sale[]>([])
   const [filteredSales, setFilteredSales] = useState<Sale[]>([])
@@ -43,7 +46,7 @@ export function SalesManagement() {
   const [editingSale, setEditingSale] = useState<Sale | null>(null)
   const [formData, setFormData] = useState({
     clientId: "",
-    status: "pending" as const,
+    status: "pending" as SaleStatus,
     items: [] as SaleItem[],
   })
   const [newItem, setNewItem] = useState({
@@ -52,7 +55,7 @@ export function SalesManagement() {
     price: 0,
   })
 
-  const statuses = ["pending", "completed", "cancelled"] as const
+  const statuses: SaleStatus[] = ["pending", "completed", "cancelled"]
 
   useEffect(() => {
     loadData()
@@ -208,7 +211,7 @@ export function SalesManagement() {
   }
 
   const resetForm = () => {
-    setFormData({ clientId: "", status: "pending", items: [] })
+    setFormData({ clientId: "", status: "pending" as SaleStatus, items: [] })
     setNewItem({ productId: "", quantity: 1, price: 0 })
     setEditingSale(null)
     setError("")
@@ -307,7 +310,7 @@ export function SalesManagement() {
                       <Label htmlFor="status">Status</Label>
                       <Select
                         value={formData.status}
-                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                        onValueChange={(value: SaleStatus) => setFormData({ ...formData, status: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
