@@ -13,13 +13,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-//    @Autowired
-//    private CustomUserDetailsService userDetailsService;
 
     @Autowired
     SecurityFilter securityFilter;
@@ -28,18 +28,35 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Requisito da API RestFull é que a session seja STATELESS.
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Adicionando CORS
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                		.requestMatchers(HttpMethod.OPTIONS, "/auth/**").permitAll() // Permite requisições OPTIONS para o CORS
-                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll() // Não é preciso autenticação.
-                        .requestMatchers(HttpMethod.POST, "/auth/register").permitAll() // Não é preciso autenticação.
+                        .requestMatchers(HttpMethod.OPTIONS, "/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll() // .authenticated() 
-                        .requestMatchers(HttpMethod.POST, "/products").permitAll()
-                        .anyRequest().authenticated() //Qualquer outra requisição está autenticada.
+                        .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // Permitir requisições GET para produtos
+                        .requestMatchers(HttpMethod.POST, "/api/products").permitAll() // Permitir requisições POST para produtos
+                        .requestMatchers(HttpMethod.PUT, "/api/products/**").permitAll() // Permitir requisições PUT para produtos
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/**").permitAll() // Permitir requisições DELETE para produtos
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("http://localhost:4200");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean

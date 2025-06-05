@@ -4,7 +4,7 @@
   <!-- Filtro de Produtos -->
   <div class="filter-container">
     <input type="text" placeholder="Filtrar por Nome" (input)="applyFilter($event, 'nome')">
-    <input type="text" placeholder="Filtrar por ID" (input)="applyFilter($event, 'id')">
+    <input type="text" placeholder="Filtrar por Código do Produto" (input)="applyFilter($event, 'codigoProduto')">
     <input type="text" placeholder="Filtrar por Preço" (input)="applyFilter($event, 'preco')">
   </div>
 
@@ -49,10 +49,10 @@
     <li *ngFor="let product of filteredProducts">
       <span>{{ product.nome }} - {{ product.preco | currency:'BRL' }}</span>
       <div class="action-buttons">
-        <button (click)="editProduct(product)">
+        <button (click)="editProduct(product)" class="edit-button">
           <i class="fas fa-edit"></i>
         </button>
-        <button (click)="deleteProduct(product.id)">
+        <button (click)="deleteProduct(product.id)" class="delete-button">
           <i class="fas fa-trash-alt"></i>
         </button>
       </div>

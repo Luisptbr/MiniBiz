@@ -35,15 +35,18 @@ export class ProductComponent implements OnInit {
       categoria: ['', Validators.required]
     });
 
-    this.loadProducts();
+    this.loadProducts();  // Chamando o método loadProducts ao inicializar o componente
   }
 
   loadProducts() {
-    this.productService.getProducts().subscribe(products => {
-      this.products = products;
-      this.filteredProducts = products;
+    this.productService.getProducts().subscribe(response => {
+      console.log('Resposta da API:', response); // Log de depuração
+      this.products = response.content; // Atualizando a lista de produtos com a propriedade 'content'
+      this.filteredProducts = this.products;
+    }, error => {
+      console.error('Erro ao carregar produtos:', error); // Log de erro
     });
-  }
+  }  
 
   newProduct() {
     this.clearForm();
