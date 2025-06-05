@@ -1,27 +1,34 @@
 import { AuthService } from "./auth.service"
 import type { Product } from "@/models/product.model"
-
-interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  message?: string
-}
+import type { ApiResponse } from "@/src/types"
+import { Page } from "./client.service"
 
 export class ProductService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
+  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
 
-  static async getProducts(): Promise<ApiResponse<Product[]>> {
+  static async getProducts(page: number = 0, size: number = 10): Promise<ApiResponse<Page<Product> | Product[]>> {
     try {
-      const response = await fetch(`${this.API_URL}/products`, {
-        headers: AuthService.getAuthHeaders(),
+      const response = await fetch(`${this.API_URL}/products?page=${page}&size=${size}`, {
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Accept': 'application/json'
+        },
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        return { success: true, data: data.products || [] }
+        // Spring Boot returns paginated responses with 'content' property
+        if (data && 'content' in data) {
+          return { 
+            success: true, 
+            data: data as Page<Product> 
+          }
+        }
+        // Handle non-paginated responses
+        const products = Array.isArray(data) ? data : (data.content || [])
+        return { success: true, data: products }
       }
-
       return { success: false, message: data.message || "Failed to fetch products" }
     } catch (error) {
       return { success: false, message: "Network error occurred" }
@@ -41,7 +48,8 @@ export class ProductService {
       const data = await response.json()
 
       if (response.ok) {
-        return { success: true, data: data.product }
+        // Spring Boot returns the created entity directly
+        return { success: true, data: data }
       }
 
       return { success: false, message: data.message || "Failed to create product" }
@@ -54,14 +62,19 @@ export class ProductService {
     try {
       const response = await fetch(`${this.API_URL}/products/${id}`, {
         method: "PUT",
-        headers: AuthService.getAuthHeaders(),
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(productData),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        return { success: true, data: data.product }
+        // Spring Boot returns the updated entity directly
+        return { success: true, data: data }
       }
 
       return { success: false, message: data.message || "Failed to update product" }
@@ -74,7 +87,10 @@ export class ProductService {
     try {
       const response = await fetch(`${this.API_URL}/products/${id}`, {
         method: "DELETE",
-        headers: AuthService.getAuthHeaders(),
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Accept': 'application/json'
+        },
       })
 
       if (response.ok) {

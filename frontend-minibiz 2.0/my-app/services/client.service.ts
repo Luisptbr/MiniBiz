@@ -1,39 +1,43 @@
 import { AuthService } from "./auth.service"
 import type { Client } from "@/models/client.model"
+import type { ApiResponse } from "@/src/types"
 
-interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  message?: string
-}
-
-// Define the Page interface for paginated responses
-interface Page<T> {
+// Define the Page interface for paginated responses from Spring Boot backend
+export interface Page<T> {
   content: T[];
   totalElements: number;
   totalPages: number;
   size: number;
   number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 }
 
 export class ClientService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
+  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
 
   static async getClients(page: number = 0, size: number = 10): Promise<ApiResponse<Page<Client> | Client[]>> {
     try {
       const response = await fetch(`${this.API_URL}/clients?page=${page}&size=${size}`, {
-        headers: AuthService.getAuthHeaders(),
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Accept': 'application/json'
+        },
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        // Check if data has content property (paginated response)
+        // Spring Boot returns paginated responses with 'content' property
         if (data && 'content' in data) {
-          return { success: true, data: data as Page<Client> }
+          return { 
+            success: true, 
+            data: data as Page<Client> 
+          }
         }
-        // Check if data is already an array or contains a clients property
-        const clients = Array.isArray(data) ? data : (data.clients || [])
+        // Handle non-paginated responses
+        const clients = Array.isArray(data) ? data : (data.content || [])
         return { success: true, data: clients }
       }
 
@@ -47,14 +51,19 @@ export class ClientService {
     try {
       const response = await fetch(`${this.API_URL}/clients`, {
         method: "POST",
-        headers: AuthService.getAuthHeaders(),
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(clientData),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        return { success: true, data: data.client }
+        // Spring Boot returns the created entity directly
+        return { success: true, data: data }
       }
 
       return { success: false, message: data.message || "Failed to create client" }
@@ -67,14 +76,19 @@ export class ClientService {
     try {
       const response = await fetch(`${this.API_URL}/clients/${id}`, {
         method: "PUT",
-        headers: AuthService.getAuthHeaders(),
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(clientData),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        return { success: true, data: data.client }
+        // Spring Boot returns the updated entity directly
+        return { success: true, data: data }
       }
 
       return { success: false, message: data.message || "Failed to update client" }
@@ -87,7 +101,10 @@ export class ClientService {
     try {
       const response = await fetch(`${this.API_URL}/clients/${id}`, {
         method: "DELETE",
-        headers: AuthService.getAuthHeaders(),
+        headers: {
+          ...AuthService.getAuthHeaders(),
+          'Accept': 'application/json'
+        },
       })
 
       if (response.ok) {
