@@ -1,0 +1,6 @@
+export enum StatusVenda {
+  AGUARDANDO = "AGUARDANDO",
+  CONCLUIDA = "CONCLUIDA",
+  CANCELADA = "CANCELADA"
+}
+

@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,110 +15,116 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { SaleService } from "@/services/sale.service"
+import { VendaService } from "@/services/venda.service"
 import { ClientService } from "@/services/client.service"
 import { ProductService } from "@/services/product.service"
-import type { Sale, SaleItem } from "@/models/sale.model"
+import type { VendaResponse, VendaRequest, ItemVenda } from "@/models/venda.model"
 import type { Client } from "@/models/client.model"
 import type { Product } from "@/models/product.model"
-import type { ApiResponse } from "@/src/types"
-import { Page } from "@/services/client.service"
-import { Plus, Edit, Trash2, Search } from "lucide-react"
+import { StatusVenda } from "@/models/status-venda.enum"
+import { Plus, Ban, Search, X } from "lucide-react"
 
-// Define the possible sale status values
-type SaleStatus = "pending" | "completed" | "cancelled";
+interface SaleItem {
+  productId: number
+  quantidade: number
+  product: Product
+}
 
 export function SalesManagement() {
-  const [sales, setSales] = useState<Sale[]>([])
-  const [filteredSales, setFilteredSales] = useState<Sale[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [products, setProducts] = useState<Product[]>([])
+  const [sales, setSales] = useState<VendaResponse[]>([])
+  const [filteredSales, setFilteredSales] = useState<VendaResponse[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingSale, setEditingSale] = useState<Sale | null>(null)
-  const [formData, setFormData] = useState({
-    clientId: "",
-    status: "pending" as SaleStatus,
-    items: [] as SaleItem[],
-  })
-  const [newItem, setNewItem] = useState({
-    productId: "",
-    quantity: 1,
-    price: 0,
-  })
-
-  const statuses: SaleStatus[] = ["pending", "completed", "cancelled"]
+  
+  // Data for new sale
+  const [selectedClientId, setSelectedClientId] = useState<string>("")
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [products, setProducts] = useState<Product[]>([])
 
   useEffect(() => {
-    loadData()
+    loadSales()
+    loadClients()
+    loadProducts()
   }, [])
 
   useEffect(() => {
-    let filtered = sales.filter(
-      (sale) =>
-        sale.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.id.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
+    const term = searchTerm?.toLowerCase() || '';
+    const filtered = sales.filter((sale) => {
+      const saleId = sale.id.toLowerCase();
+      const saleDate = new Date(sale.vendaDate).toLocaleDateString();
+      const status = sale.status.toLowerCase();
+      
+      return saleId.includes(term) || 
+             saleDate.includes(term) || 
+             status.includes(term);
+    });
+    
+    setFilteredSales(filtered);
+  }, [sales, searchTerm]);
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((sale) => sale.status === statusFilter)
-    }
-
-    setFilteredSales(filtered)
-  }, [sales, searchTerm, statusFilter])
-
-  const loadData = async () => {
+  const loadSales = async () => {
     try {
-      setIsLoading(true)
-      const [salesResponse, clientsResponse, productsResponse] = await Promise.all([
-        SaleService.getSales(),
-        ClientService.getClients(),
-        ProductService.getProducts(),
-      ])
-
-      // Handle sales response
-      if (salesResponse && salesResponse.success && salesResponse.data) {
-        if (salesResponse.data && 'content' in salesResponse.data) {
-          // Handle paginated response
-          setSales(salesResponse.data.content);
-        } else {
-          // Handle array response
-          setSales(Array.isArray(salesResponse.data) ? salesResponse.data : []);
-        }
-      }
+      setIsLoading(true);
+      const response = await VendaService.getVendas();
       
-      // Handle clients response
-      if (clientsResponse && clientsResponse.success && clientsResponse.data) {
-        if (clientsResponse.data && 'content' in clientsResponse.data) {
-          // Handle paginated response
-          setClients(clientsResponse.data.content);
-        } else {
-          // Handle array response
-          setClients(Array.isArray(clientsResponse.data) ? clientsResponse.data : []);
-        }
-      }
-      
-      // Handle products response
-      if (productsResponse && productsResponse.success && productsResponse.data) {
-        if (productsResponse.data && 'content' in productsResponse.data) {
-          // Handle paginated response
-          setProducts(productsResponse.data.content);
-        } else {
-          // Handle array response
-          setProducts(Array.isArray(productsResponse.data) ? productsResponse.data : []);
-        }
+      if (response.success && Array.isArray(response.data)) {
+        setSales(response.data);
+      } else {
+        setError(response.message || "Failed to load sales");
       }
     } catch (err) {
-      setError("An error occurred while loading data")
+      setError("An error occurred while loading sales");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
+  }
+
+  const loadClients = async () => {
+    const response = await ClientService.getClients();
+    if (response.success && response.data) {
+      setClients(response.data);
+    }
+  }
+
+  const loadProducts = async () => {
+    const response = await ProductService.getProducts();
+    if (response.success && response.data) {
+      setProducts(response.data);
+    }
+  }
+
+  const handleAddItem = () => {
+    if (products.length > 0) {
+      setSaleItems([...saleItems, { productId: parseInt(products[0].id), quantidade: 1, product: products[0] }]);
+    }
+  }
+
+  const handleRemoveItem = (index: number) => {
+    setSaleItems(saleItems.filter((_, i) => i !== index));
+  }
+
+  const handleItemChange = (index: number, field: keyof SaleItem, value: any) => {
+    const newItems = [...saleItems];
+    if (field === 'productId') {
+      const product = products.find(p => p.id === value);
+      if (product) {
+        newItems[index] = { ...newItems[index], [field]: parseInt(value), product };
+      }
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
+    setSaleItems(newItems);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,115 +132,87 @@ export function SalesManagement() {
     setIsLoading(true)
     setError("")
 
-    if (formData.items.length === 0) {
-      setError("Please add at least one item to the sale")
-      setIsLoading(false)
-      return
-    }
-
     try {
-      let response
-      if (editingSale) {
-        response = await SaleService.updateSale(editingSale.id, formData)
-      } else {
-        response = await SaleService.createSale(formData)
-      }
+      const vendaData: VendaRequest = {
+        clientId: parseInt(selectedClientId),
+        produtosDTO: saleItems.map(item => ({
+          productId: parseInt(item.product.id),
+          quantidade: item.quantidade
+        }))
+      };
+
+      const response = await VendaService.createVenda(vendaData);
 
       if (response.success) {
-        await loadData()
-        setIsDialogOpen(false)
-        resetForm()
+        await loadSales();
+        setIsDialogOpen(false);
+        resetForm();
       } else {
-        setError(response.message || "Operation failed")
+        setError(response.message || "Failed to create sale");
       }
     } catch (err) {
-      setError("An error occurred")
+      setError("An error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
-  const handleEdit = (sale: Sale) => {
-    setEditingSale(sale)
-    setFormData({
-      clientId: sale.client.id,
-      status: sale.status,
-      items: sale.items,
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this sale?")) {
+  const handleCancel = async (id: string) => {
+    if (confirm("Are you sure you want to cancel this sale?")) {
       try {
-        const response = await SaleService.deleteSale(id)
+        const response = await VendaService.cancelarVenda(id);
         if (response.success) {
-          await loadData()
+          await loadSales();
         } else {
-          setError(response.message || "Failed to delete sale")
+          setError(response.message || "Failed to cancel sale");
         }
       } catch (err) {
-        setError("An error occurred while deleting sale")
+        setError("An error occurred while canceling sale");
       }
     }
-  }
-
-  const addItem = () => {
-    if (!newItem.productId) return
-
-    const product = products.find((p) => p.id === newItem.productId)
-    if (!product) return
-
-    const item: SaleItem = {
-      id: Date.now().toString(),
-      productId: newItem.productId,
-      product: product,
-      quantity: newItem.quantity,
-      price: newItem.price || product.price,
-    }
-
-    setFormData({
-      ...formData,
-      items: [...formData.items, item],
-    })
-
-    setNewItem({ productId: "", quantity: 1, price: 0 })
-  }
-
-  const removeItem = (itemId: string) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((item) => item.id !== itemId),
-    })
   }
 
   const resetForm = () => {
-    setFormData({ clientId: "", status: "pending" as SaleStatus, items: [] })
-    setNewItem({ productId: "", quantity: 1, price: 0 })
-    setEditingSale(null)
-    setError("")
+    setSelectedClientId("");
+    setSaleItems([]);
+    setError("");
   }
 
   const openNewSaleDialog = () => {
-    resetForm()
-    setIsDialogOpen(true)
+    resetForm();
+    setIsDialogOpen(true);
   }
 
-  const getStatusBadge = (status: string) => {
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  }
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('pt-BR');
+  }
+
+  // Get client name by ID
+  const getClientName = (clientId: number) => {
+    const client = clients.find(c => parseInt(c.id) === clientId);
+    return client ? client.nome : 'Unknown';
+  }
+
+  // Get badge color for status
+  const getStatusBadgeClass = (status: StatusVenda) => {
     switch (status) {
-      case "completed":
-        return <Badge variant="default">Completed</Badge>
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>
+      case StatusVenda.CONCLUIDA:
+        return "bg-green-100 text-green-800";
+      case StatusVenda.CANCELADA:
+        return "bg-red-100 text-red-800";
+      case StatusVenda.AGUARDANDO:
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return "bg-yellow-100 text-yellow-800";
     }
-  }
-
-  const calculateTotal = (items: SaleItem[]) => {
-    return items.reduce((total, item) => total + item.price * item.quantity, 0)
   }
 
   return (
@@ -244,33 +220,18 @@ export function SalesManagement() {
       <Card>
         <CardHeader>
           <CardTitle>Sales Management</CardTitle>
-          <CardDescription>Manage your sales transactions and orders</CardDescription>
+          <CardDescription>Manage your sales and orders</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-between items-center mb-6">
-            <div className="flex space-x-4">
-              <div className="relative w-72">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search sales..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  {statuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search sales..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -281,9 +242,9 @@ export function SalesManagement() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>{editingSale ? "Edit Sale" : "Create New Sale"}</DialogTitle>
+                  <DialogTitle>Create New Sale</DialogTitle>
                   <DialogDescription>
-                    {editingSale ? "Update sale information" : "Create a new sale transaction"}
+                    Select a client and add products to create a new sale
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
@@ -291,119 +252,77 @@ export function SalesManagement() {
                     <div className="grid gap-2">
                       <Label htmlFor="client">Client</Label>
                       <Select
-                        value={formData.clientId}
-                        onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                        value={selectedClientId}
+                        onValueChange={setSelectedClientId}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select client" />
+                        <SelectTrigger id="client">
+                          <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
                         <SelectContent>
                           {clients.map((client) => (
                             <SelectItem key={client.id} value={client.id}>
-                              {client.name} - {client.company}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value: SaleStatus) => setFormData({ ...formData, status: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statuses.map((status) => (
-                            <SelectItem key={status} value={status}>
-                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                              {client.nome}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="space-y-4">
-                      <Label>Sale Items</Label>
-                      <div className="grid grid-cols-4 gap-2">
-                        <Select
-                          value={newItem.productId}
-                          onValueChange={(value) => {
-                            const product = products.find((p) => p.id === value)
-                            setNewItem({ ...newItem, productId: value, price: product?.price || 0 })
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name} - ${product.price}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          type="number"
-                          placeholder="Qty"
-                          value={newItem.quantity}
-                          onChange={(e) => setNewItem({ ...newItem, quantity: Number.parseInt(e.target.value) || 1 })}
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Price"
-                          value={newItem.price}
-                          onChange={(e) => setNewItem({ ...newItem, price: Number.parseFloat(e.target.value) || 0 })}
-                        />
-                        <Button type="button" onClick={addItem}>
-                          Add
+                    <div className="grid gap-2">
+                      <div className="flex justify-between items-center">
+                        <Label>Products</Label>
+                        <Button type="button" onClick={handleAddItem} size="sm" variant="outline">
+                          <Plus className="h-4 w-4 mr-1" /> Add Product
                         </Button>
                       </div>
-
-                      {formData.items.length > 0 && (
-                        <div className="border rounded-lg">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Total</TableHead>
-                                <TableHead>Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {formData.items.map((item) => (
-                                <TableRow key={item.id}>
-                                  <TableCell>{item.product.name}</TableCell>
-                                  <TableCell>{item.quantity}</TableCell>
-                                  <TableCell>${item.price.toFixed(2)}</TableCell>
-                                  <TableCell>${(item.price * item.quantity).toFixed(2)}</TableCell>
-                                  <TableCell>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => removeItem(item.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                          <div className="p-4 border-t">
-                            <div className="text-right font-bold">
-                              Total: ${calculateTotal(formData.items).toFixed(2)}
-                            </div>
-                          </div>
+                      
+                      {saleItems.length === 0 && (
+                        <div className="text-center py-4 text-muted-foreground">
+                          No products added. Click "Add Product" to add products to the sale.
                         </div>
                       )}
+
+                      {saleItems.map((item, index) => (
+                        <div key={index} className="flex space-x-2 items-end border p-2 rounded-md">
+                          <div className="flex-1">
+                            <Label htmlFor={`product-${index}`}>Product</Label>
+                            <Select
+                              value={item.product.id.toString()}
+                              onValueChange={(value) => handleItemChange(index, 'productId', value)}
+                            >
+                              <SelectTrigger id={`product-${index}`}>
+                                <SelectValue placeholder="Select a product" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.nome} - {formatCurrency(product.preco)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-24">
+                            <Label htmlFor={`quantity-${index}`}>Quantity</Label>
+                            <Input
+                              id={`quantity-${index}`}
+                              type="number"
+                              min="1"
+                              value={item.quantidade}
+                              onChange={(e) => handleItemChange(index, 'quantidade', parseInt(e.target.value))}
+                            />
+                          </div>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleRemoveItem(index)}
+                            className="mb-0.5"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                   {error && (
@@ -415,8 +334,8 @@ export function SalesManagement() {
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? "Saving..." : editingSale ? "Update" : "Create"}
+                    <Button type="submit" disabled={isLoading || !selectedClientId || saleItems.length === 0}>
+                      {isLoading ? "Creating..." : "Create Sale"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -434,10 +353,10 @@ export function SalesManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sale ID</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead>ID</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Items</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Products</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -457,22 +376,27 @@ export function SalesManagement() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredSales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell className="font-medium">#{sale.id}</TableCell>
-                      <TableCell>{sale.client.name}</TableCell>
-                      <TableCell>{new Date(sale.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{sale.items.length} items</TableCell>
-                      <TableCell>${sale.total.toFixed(2)}</TableCell>
-                      <TableCell>{getStatusBadge(sale.status)}</TableCell>
+                  filteredSales.map((sale, index) => (
+                    <TableRow key={sale?.id || index}>
+                      <TableCell className="font-medium">{sale?.id || '-'}</TableCell>
+                      <TableCell>{formatDate(sale?.vendaDate) || '-'}</TableCell>
+                      <TableCell>{getClientName(sale?.clientId) || '-'}</TableCell>
+                      <TableCell>
+                        {sale?.products?.length || 0} items
+                      </TableCell>
+                      <TableCell>{formatCurrency(sale?.valorTotal || 0)}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(sale?.status)}`}>
+                          {sale?.status}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(sale)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(sale.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {sale?.status !== StatusVenda.CANCELADA && (
+                            <Button variant="outline" size="sm" onClick={() => handleCancel(sale.id)}>
+                              <Ban className="h-4 w-4 mr-1" /> Cancel
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
