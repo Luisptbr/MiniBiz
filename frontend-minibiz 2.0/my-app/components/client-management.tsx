@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import {
   Dialog,
   DialogContent,
@@ -23,15 +22,6 @@ import { ClientService } from "@/services/client.service"
 import type { Client } from "@/models/client.model"
 import { Plus, Edit, Trash2, Search } from "lucide-react"
 
-// Define Page interface for paginated data
-interface Page<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-}
-
 export function ClientManagement() {
   const [clients, setClients] = useState<Client[]>([])
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
@@ -40,54 +30,65 @@ export function ClientManagement() {
   const [error, setError] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [currentPage, setCurrentPage] = useState(0)
-  const [pageSize, setPageSize] = useState(10)
-  const [totalElements, setTotalElements] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
   const [formData, setFormData] = useState({
-    name: "",
+    nome: "",
     email: "",
-    phone: "",
-    address: "",
-    company: "",
+    telefone: "",
+    endereco: "",
   })
 
   useEffect(() => {
     loadClients()
-  }, [currentPage, pageSize])
+  }, [])
 
   useEffect(() => {
+    // Add validation for searchTerm to prevent errors
+    const term = searchTerm?.toLowerCase() || '';
+    
+    // Add validation for client properties to prevent "toLowerCase of undefined" errors
     const filtered = clients.filter(
-      (client) =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.company.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    setFilteredClients(filtered)
-  }, [clients, searchTerm])
+      (client) => {
+        // Make sure each property exists before calling toLowerCase()
+        const nome = client?.nome?.toLowerCase() || '';
+        const email = client?.email?.toLowerCase() || '';
+        const endereco = client?.endereco?.toLowerCase() || '';
+        
+        return nome.includes(term) || 
+               email.includes(term) || 
+               endereco.includes(term);
+      }
+    );
+    
+    setFilteredClients(filtered);
+  }, [clients, searchTerm]);
 
   const loadClients = async () => {
     try {
-      setIsLoading(true)
-      const response = await ClientService.getClients(currentPage, pageSize)
-      if (response.success) {
-        // Check if data is a Page object with content array
-        if (response.data && 'content' in response.data) {
-          const pageData = response.data as unknown as Page<Client>;
-          setClients(pageData.content)
-          setTotalElements(pageData.totalElements)
-          setTotalPages(pageData.totalPages)
-        } else {
-          // Fallback for backward compatibility
-          setClients(Array.isArray(response.data) ? response.data : [])
-        }
+      setIsLoading(true);
+      console.log('Loading clients...');
+      const response = await ClientService.getClients();
+      
+      if (response.success && Array.isArray(response.data)) {
+        // Validate and sanitize client data before setting state
+        const validatedClients = response.data.map(client => ({
+          id: client?.id || '',
+          nome: client?.nome || '',
+          email: client?.email || '',
+          telefone: client?.telefone || '',
+          endereco: client?.endereco || ''
+        }));
+        
+        console.log(`Loaded ${validatedClients.length} clients successfully`);
+        setClients(validatedClients);
       } else {
-        setError(response.message || "Failed to load clients")
+        console.error('Failed to load clients:', response);
+        setError(response.message || "Failed to load clients");
       }
     } catch (err) {
-      setError("An error occurred while loading clients")
+      console.error('Error loading clients:', err);
+      setError("An error occurred while loading clients");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -105,10 +106,6 @@ export function ClientManagement() {
       }
 
       if (response.success) {
-        // If we're adding a new client, go to the first page
-        if (!editingClient) {
-          setCurrentPage(0)
-        }
         await loadClients()
         setIsDialogOpen(false)
         resetForm()
@@ -123,15 +120,15 @@ export function ClientManagement() {
   }
 
   const handleEdit = (client: Client) => {
-    setEditingClient(client)
+    setEditingClient(client);
+    // Add validation to prevent undefined values
     setFormData({
-      name: client.name,
-      email: client.email,
-      phone: client.phone,
-      address: client.address,
-      company: client.company,
-    })
-    setIsDialogOpen(true)
+      nome: client?.nome || '',
+      email: client?.email || '',
+      telefone: client?.telefone || '',
+      endereco: client?.endereco || '',
+    });
+    setIsDialogOpen(true);
   }
 
   const handleDelete = async (id: string) => {
@@ -139,12 +136,7 @@ export function ClientManagement() {
       try {
         const response = await ClientService.deleteClient(id)
         if (response.success) {
-          // If we deleted the last item on the current page, go to the previous page
-          if (clients.length === 1 && currentPage > 0) {
-            setCurrentPage(currentPage - 1)
-          } else {
-            await loadClients()
-          }
+          await loadClients()
         } else {
           setError(response.message || "Failed to delete client")
         }
@@ -155,7 +147,7 @@ export function ClientManagement() {
   }
 
   const resetForm = () => {
-    setFormData({ name: "", email: "", phone: "", address: "", company: "" })
+    setFormData({ nome: "", email: "", telefone: "", endereco: "" })
     setEditingClient(null)
     setError("")
   }
@@ -163,12 +155,6 @@ export function ClientManagement() {
   const openNewClientDialog = () => {
     resetForm()
     setIsDialogOpen(true)
-  }
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 0 && newPage < totalPages) {
-      setCurrentPage(newPage)
-    }
   }
 
   return (
@@ -206,11 +192,11 @@ export function ClientManagement() {
                 <form onSubmit={handleSubmit}>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="name">Name</Label>
+                      <Label htmlFor="nome">Name</Label>
                       <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        id="nome"
+                        value={formData.nome}
+                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                         required
                       />
                     </div>
@@ -225,27 +211,19 @@ export function ClientManagement() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="phone">Phone</Label>
+                      <Label htmlFor="telefone">Phone</Label>
                       <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        id="telefone"
+                        value={formData.telefone}
+                        onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="company">Company</Label>
+                      <Label htmlFor="endereco">Address</Label>
                       <Input
-                        id="company"
-                        value={formData.company}
-                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="address">Address</Label>
-                      <Input
-                        id="address"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        id="endereco"
+                        value={formData.endereco}
+                        onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
                       />
                     </div>
                   </div>
@@ -280,7 +258,7 @@ export function ClientManagement() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Company</TableHead>
+                  <TableHead>Address</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -298,12 +276,12 @@ export function ClientManagement() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredClients.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.name}</TableCell>
-                      <TableCell>{client.email}</TableCell>
-                      <TableCell>{client.phone}</TableCell>
-                      <TableCell>{client.company}</TableCell>
+                  filteredClients.map((client, index) => (
+                    <TableRow key={client?.id || index}>
+                      <TableCell className="font-medium">{client?.nome || '-'}</TableCell>
+                      <TableCell>{client?.email || '-'}</TableCell>
+                      <TableCell>{client?.telefone || '-'}</TableCell>
+                      <TableCell>{client?.endereco || '-'}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button variant="outline" size="sm" onClick={() => handleEdit(client)}>
@@ -320,33 +298,6 @@ export function ClientManagement() {
               </TableBody>
             </Table>
           </div>
-          
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex justify-center">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => handlePageChange(currentPage - 1)} 
-                      className={currentPage === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  <PaginationItem>
-                    <span className="px-4 py-2">
-                      Page {currentPage + 1} of {totalPages}
-                    </span>
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => handlePageChange(currentPage + 1)} 
-                      className={currentPage === totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

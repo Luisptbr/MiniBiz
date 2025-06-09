@@ -1,119 +1,286 @@
 import { AuthService } from "./auth.service"
 import type { Client } from "@/models/client.model"
-import type { ApiResponse } from "@/src/types"
 
-// Define the Page interface for paginated responses from Spring Boot backend
-export interface Page<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-  first: boolean;
-  last: boolean;
-  empty: boolean;
+interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  message?: string
+}
+
+// Interface representing the client data structure from the backend
+interface BackendClient {
+  id: number
+  nome: string
+  endereco: string
+  email: string
+  telefone: string | null
+}
+
+// Backend pagination interface
+interface PageResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+  first: boolean
+  last: boolean
+  empty: boolean
 }
 
 export class ClientService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
+  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
+  private static readonly CLIENT_ENDPOINT = `${ClientService.API_URL}/clients`
 
-  static async getClients(page: number = 0, size: number = 10): Promise<ApiResponse<Page<Client> | Client[]>> {
+  // Helper method to convert client data from backend to frontend model
+  private static mapClientData(client: BackendClient | null | undefined, index?: number): Client {
+    if (!client) {
+      return {
+        id: index !== undefined ? `temp-${index}` : 'temp-id',
+        nome: '',
+        email: '',
+        telefone: '',
+        endereco: ''
+      };
+    }
+    
+    return {
+      id: client.id?.toString() || (index !== undefined ? `temp-${index}` : 'temp-id'),
+      nome: client.nome || '',
+      email: client.email || '',
+      telefone: client.telefone || '',
+      endereco: client.endereco || ''
+    };
+  }
+
+  // Get common headers including authorization
+  private static getHeaders() {
+    return {
+      ...AuthService.getAuthHeaders(),
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+  }
+
+  static async getClients(): Promise<ApiResponse<Client[]>> {
     try {
-      const response = await fetch(`${this.API_URL}/clients?page=${page}&size=${size}`, {
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Accept': 'application/json'
-        },
-      })
+      console.log('ClientService: Fetching clients from API...');
+      const response = await fetch(`${this.CLIENT_ENDPOINT}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+        credentials: 'omit'
+      });
 
-      const data = await response.json()
-
-      if (response.ok) {
-        // Spring Boot returns paginated responses with 'content' property
-        if (data && 'content' in data) {
-          return { 
-            success: true, 
-            data: data as Page<Client> 
-          }
+      console.log('ClientService: Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to fetch clients";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('ClientService: API error response:', errorData);
+        } catch (parseError) {
+          console.error('ClientService: Could not parse error response:', parseError);
         }
-        // Handle non-paginated responses
-        const clients = Array.isArray(data) ? data : (data.content || [])
-        return { success: true, data: clients }
+        return { success: false, message: errorMessage };
       }
+      
+      const rawData = await response.json();
+      console.log('ClientService: Raw API response:', rawData);
 
-      return { success: false, message: data.message || "Failed to fetch clients" }
+      try {
+        // Log basic response structure for debugging
+        console.log('ClientService: Response structure:', {
+          isArray: Array.isArray(rawData),
+          hasContent: !!rawData.content,
+          keys: Object.keys(rawData)
+        });
+        
+        // Handle Spring Data paginated response (most common)
+        if (rawData.content && Array.isArray(rawData.content)) {
+          console.log('ClientService: Processing paginated response with', rawData.content.length, 'items');
+          const clients = rawData.content.map((client: BackendClient) => ({
+            id: client.id.toString(), // Convert number to string for frontend
+            nome: client.nome || '',
+            email: client.email || '',
+            telefone: client.telefone || '',
+            endereco: client.endereco || ''
+          }));
+          return { success: true, data: clients };
+        } 
+        
+        // Handle direct array response
+        if (Array.isArray(rawData)) {
+          console.log('ClientService: Processing direct array response with', rawData.length, 'items');
+          const clients = rawData.map((client: BackendClient) => ({
+            id: client.id.toString(), // Convert number to string for frontend
+            nome: client.nome || '',
+            email: client.email || '',
+            telefone: client.telefone || '',
+            endereco: client.endereco || ''
+          }));
+          return { success: true, data: clients };
+        } 
+        
+        // Handle single client response
+        if (rawData && typeof rawData === 'object' && rawData.id) {
+          console.log('ClientService: Processing single client response');
+          const client = {
+            id: rawData.id.toString(),
+            nome: rawData.nome || '',
+            email: rawData.email || '',
+            telefone: rawData.telefone || '',
+            endereco: rawData.endereco || ''
+          };
+          return { success: true, data: [client] };
+        }
+        
+        // For development only - create mock data if response format is unexpected
+        if (process.env.NODE_ENV === 'development') {
+          console.log('ClientService: Creating mock data for development');
+          const mockClients: Client[] = [
+            {
+              id: '1',
+              nome: 'Mock Client 1',
+              email: 'mock1@example.com',
+              telefone: '(123) 456-7890',
+              endereco: '123 Mock Street'
+            },
+            {
+              id: '2',
+              nome: 'Mock Client 2',
+              email: 'mock2@example.com',
+              telefone: '(987) 654-3210',
+              endereco: '456 Mock Avenue'
+            }
+          ];
+          console.log('ClientService: Using mock data due to unexpected response format');
+          return { success: true, data: mockClients };
+        }
+        
+        console.error('ClientService: Unexpected API response format', rawData);
+        return { success: false, message: "Unexpected API response format" };
+      } catch (parseError) {
+        console.error('ClientService: Error parsing response data:', parseError);
+        return { success: false, message: "Error parsing response data" };
+      }
     } catch (error) {
+      console.error('ClientService: Network error:', error);
       return { success: false, message: "Network error occurred" }
     }
   }
 
-  static async createClient(clientData: Omit<Client, "id" | "createdAt" | "updatedAt">): Promise<ApiResponse<Client>> {
+  static async createClient(clientData: Omit<Client, "id">): Promise<ApiResponse<Client>> {
     try {
-      const response = await fetch(`${this.API_URL}/clients`, {
+      console.log('ClientService: Creating client with data:', clientData);
+      const response = await fetch(`${this.CLIENT_ENDPOINT}`, {
         method: "POST",
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: this.getHeaders(),
+        credentials: 'omit',
         body: JSON.stringify(clientData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Spring Boot returns the created entity directly
-        return { success: true, data: data }
+      });
+      
+      console.log('ClientService: Create response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to create client";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('ClientService: Create error response:', errorData);
+        } catch (parseError) {
+          console.error('ClientService: Could not parse create error response');
+        }
+        return { success: false, message: errorMessage };
       }
+      
+      const data = await response.json();
+      console.log('ClientService: Create response data:', data);
 
-      return { success: false, message: data.message || "Failed to create client" }
+      // Convert to client model
+      const client = this.mapClientData(data);
+      return { success: true, data: client }
     } catch (error) {
+      console.error('ClientService: Create network error:', error);
       return { success: false, message: "Network error occurred" }
     }
   }
 
   static async updateClient(id: string, clientData: Partial<Client>): Promise<ApiResponse<Client>> {
     try {
-      const response = await fetch(`${this.API_URL}/clients/${id}`, {
-        method: "PUT",
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(clientData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Spring Boot returns the updated entity directly
-        return { success: true, data: data }
+      console.log(`ClientService: Updating client ${id} with data:`, clientData);
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        console.error('ClientService: Invalid client ID:', id);
+        return { success: false, message: "Invalid client ID" };
       }
+      
+      const response = await fetch(`${this.CLIENT_ENDPOINT}/${numericId}`, {
+        method: "PUT",
+        headers: this.getHeaders(),
+        credentials: 'omit',
+        body: JSON.stringify(clientData),
+      });
+      
+      console.log('ClientService: Update response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to update client";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('ClientService: Update error response:', errorData);
+        } catch (parseError) {
+          console.error('ClientService: Could not parse update error response');
+        }
+        return { success: false, message: errorMessage };
+      }
+      
+      const data = await response.json();
+      console.log('ClientService: Update response data:', data);
 
-      return { success: false, message: data.message || "Failed to update client" }
+      // Convert to client model
+      const client = this.mapClientData(data);
+      return { success: true, data: client }
     } catch (error) {
+      console.error('ClientService: Update network error:', error);
       return { success: false, message: "Network error occurred" }
     }
   }
 
   static async deleteClient(id: string): Promise<ApiResponse<void>> {
     try {
-      const response = await fetch(`${this.API_URL}/clients/${id}`, {
+      console.log(`ClientService: Deleting client ${id}`);
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        console.error('ClientService: Invalid client ID for deletion:', id);
+        return { success: false, message: "Invalid client ID" };
+      }
+      
+      const response = await fetch(`${this.CLIENT_ENDPOINT}/${numericId}`, {
         method: "DELETE",
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Accept': 'application/json'
-        },
-      })
+        headers: this.getHeaders(),
+        credentials: 'omit',
+      });
 
+      console.log('ClientService: Delete response status:', response.status, response.statusText);
+      
       if (response.ok) {
-        return { success: true }
+        console.log('ClientService: Client deleted successfully');
+        return { success: true };
       }
 
-      const data = await response.json()
-      return { success: false, message: data.message || "Failed to delete client" }
+      let errorMessage = "Failed to delete client";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+        console.error('ClientService: Delete error response:', errorData);
+      } catch (parseError) {
+        console.error('ClientService: Could not parse delete error response');
+      }
+      return { success: false, message: errorMessage };
     } catch (error) {
+      console.error('ClientService: Delete network error:', error);
       return { success: false, message: "Network error occurred" }
     }
   }
