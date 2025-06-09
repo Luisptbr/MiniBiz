@@ -1,106 +1,150 @@
 import { AuthService } from "./auth.service"
 import type { Product } from "@/models/product.model"
-import type { ApiResponse } from "@/src/types"
-import { Page } from "./client.service"
+
+interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  message?: string
+}
+
+// Backend data structure
+interface BackendProduct {
+  id: number
+  nome: string
+  descricao: string
+  preco: number
+  quantidadeEmEstoque: number
+  codigoProduto: string
+  dataCriacao: string
+  dataAtualizacao: string
+  categoria: string
+}
 
 export class ProductService {
-  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
+  private static readonly API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"
+  private static readonly PRODUCT_ENDPOINT = `${ProductService.API_URL}/products`
 
-  static async getProducts(page: number = 0, size: number = 10): Promise<ApiResponse<Page<Product> | Product[]>> {
-    try {
-      const response = await fetch(`${this.API_URL}/products?page=${page}&size=${size}`, {
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Accept': 'application/json'
-        },
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Spring Boot returns paginated responses with 'content' property
-        if (data && 'content' in data) {
-          return { 
-            success: true, 
-            data: data as Page<Product> 
-          }
-        }
-        // Handle non-paginated responses
-        const products = Array.isArray(data) ? data : (data.content || [])
-        return { success: true, data: products }
-      }
-      return { success: false, message: data.message || "Failed to fetch products" }
-    } catch (error) {
-      return { success: false, message: "Network error occurred" }
+  private static getHeaders() {
+    return {
+      ...AuthService.getAuthHeaders(),
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     }
   }
 
-  static async createProduct(
-    productData: Omit<Product, "id" | "createdAt" | "updatedAt">,
-  ): Promise<ApiResponse<Product>> {
+  private static mapProductData(product: BackendProduct): Product {
+    return {
+      id: product.id.toString(),
+      nome: product.nome,
+      descricao: product.descricao,
+      preco: product.preco,
+      quantidadeEmEstoque: product.quantidadeEmEstoque,
+      codigoProduto: product.codigoProduto,
+      dataCriacao: product.dataCriacao,
+      dataAtualizacao: product.dataAtualizacao,
+      categoria: product.categoria
+    }
+  }
+
+  static async getProducts(): Promise<ApiResponse<Product[]>> {
     try {
-      const response = await fetch(`${this.API_URL}/products`, {
-        method: "POST",
-        headers: AuthService.getAuthHeaders(),
-        body: JSON.stringify(productData),
-      })
+      const response = await fetch(this.PRODUCT_ENDPOINT, {
+        method: "GET",
+        headers: this.getHeaders(),
+        credentials: 'omit'
+      });
 
-      const data = await response.json()
-
-      if (response.ok) {
-        // Spring Boot returns the created entity directly
-        return { success: true, data: data }
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || "Failed to fetch products" };
       }
 
-      return { success: false, message: data.message || "Failed to create product" }
+      const data = await response.json();
+      
+      // Handle paginated response
+      if (data.content && Array.isArray(data.content)) {
+        const products = data.content.map(this.mapProductData);
+        return { success: true, data: products };
+      }
+
+      return { success: false, message: "Unexpected response format" };
     } catch (error) {
-      return { success: false, message: "Network error occurred" }
+      console.error('ProductService: Network error:', error);
+      return { success: false, message: "Network error occurred" };
+    }
+  }
+
+  static async createProduct(productData: Omit<Product, "id" | "dataCriacao" | "dataAtualizacao">): Promise<ApiResponse<Product>> {
+    try {
+      const response = await fetch(this.PRODUCT_ENDPOINT, {
+        method: "POST",
+        headers: this.getHeaders(),
+        credentials: 'omit',
+        body: JSON.stringify(productData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || "Failed to create product" };
+      }
+
+      const data = await response.json();
+      return { success: true, data: this.mapProductData(data) };
+    } catch (error) {
+      console.error('ProductService: Create error:', error);
+      return { success: false, message: "Network error occurred" };
     }
   }
 
   static async updateProduct(id: string, productData: Partial<Product>): Promise<ApiResponse<Product>> {
     try {
-      const response = await fetch(`${this.API_URL}/products/${id}`, {
-        method: "PUT",
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(productData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Spring Boot returns the updated entity directly
-        return { success: true, data: data }
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        return { success: false, message: "Invalid product ID" };
       }
 
-      return { success: false, message: data.message || "Failed to update product" }
+      const response = await fetch(`${this.PRODUCT_ENDPOINT}/${numericId}`, {
+        method: "PUT",
+        headers: this.getHeaders(),
+        credentials: 'omit',
+        body: JSON.stringify(productData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, message: errorData.message || "Failed to update product" };
+      }
+
+      const data = await response.json();
+      return { success: true, data: this.mapProductData(data) };
     } catch (error) {
-      return { success: false, message: "Network error occurred" }
+      console.error('ProductService: Update error:', error);
+      return { success: false, message: "Network error occurred" };
     }
   }
 
   static async deleteProduct(id: string): Promise<ApiResponse<void>> {
     try {
-      const response = await fetch(`${this.API_URL}/products/${id}`, {
-        method: "DELETE",
-        headers: {
-          ...AuthService.getAuthHeaders(),
-          'Accept': 'application/json'
-        },
-      })
-
-      if (response.ok) {
-        return { success: true }
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        return { success: false, message: "Invalid product ID" };
       }
 
-      const data = await response.json()
-      return { success: false, message: data.message || "Failed to delete product" }
+      const response = await fetch(`${this.PRODUCT_ENDPOINT}/${numericId}`, {
+        method: "DELETE",
+        headers: this.getHeaders(),
+        credentials: 'omit'
+      });
+
+      if (response.ok) {
+        return { success: true };
+      }
+
+      const errorData = await response.json();
+      return { success: false, message: errorData.message || "Failed to delete product" };
     } catch (error) {
-      return { success: false, message: "Network error occurred" }
+      console.error('ProductService: Delete error:', error);
+      return { success: false, message: "Network error occurred" };
     }
   }
 }

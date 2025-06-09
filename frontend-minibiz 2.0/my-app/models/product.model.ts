@@ -1,11 +1,11 @@
 export interface Product {
   id: string
-  name: string
-  description: string
-  price: number
-  quantity: number
-  category: string
-  sku: string
-  createdAt: string
-  updatedAt: string
+  nome: string
+  descricao: string
+  preco: number
+  quantidadeEmEstoque: number
+  codigoProduto: string
+  dataCriacao: string
+  dataAtualizacao: string
+  categoria: string
 }
